@@ -34,6 +34,7 @@ import com.ibm.spark.magic.dependencies.DependencyMap
 import com.ibm.spark.utils.{KeyValuePairUtils, LogLike}
 import com.typesafe.config.Config
 import joptsimple.util.KeyValuePair
+import org.apache.spark.sql.SQLContext
 import org.apache.spark.{SparkContext, SparkConf}
 
 import scala.collection.JavaConverters._
@@ -84,8 +85,11 @@ trait StandardComponentInitialization extends ComponentInitialization {
     val sparkContext = initializeSparkContext(
       config, appName, actorLoader, interpreter)
     val dependencyDownloader = initializeDependencyDownloader(config)
+    //dt - initial SQL contest
+    val sqlContext = initializeSQLContext(sparkContext, interpreter)
+    //dt - passed in sqlContext
     val magicLoader = initializeMagicLoader(
-      config, interpreter, kernelInterpreter, sparkContext, dependencyDownloader)
+      config, interpreter, kernelInterpreter, sparkContext, dependencyDownloader, sqlContext)
     val kernel = initializeKernel(
       actorLoader, interpreter, kernelInterpreter, commManager, magicLoader)
     val responseMap = initializeResponseMap()
@@ -296,7 +300,7 @@ trait StandardComponentInitialization extends ComponentInitialization {
 
   private def initializeMagicLoader(
     config: Config, interpreter: Interpreter, kernelInterpreter: Interpreter, sparkContext: SparkContext,
-    dependencyDownloader: DependencyDownloader
+    dependencyDownloader: DependencyDownloader, sqlContext: SQLContext
   ) = {
     logger.debug("Constructing magic loader")
 
@@ -304,6 +308,8 @@ trait StandardComponentInitialization extends ComponentInitialization {
     val dependencyMap = new DependencyMap()
       .setInterpreter(interpreter)
       .setSparkContext(sparkContext)
+      //dt - set sqlContext
+      .setSqlContext(sqlContext)
       .setKernelInterpreter(kernelInterpreter)
       .setDependencyDownloader(dependencyDownloader)
 
@@ -327,5 +333,19 @@ trait StandardComponentInitialization extends ComponentInitialization {
     )
     magicLoader.dependencyMap.setMagicLoader(magicLoader)
     magicLoader
+  }
+
+  // dt - Added this method
+  protected def initializeSQLContext(sparkContext: SparkContext, interpreter: Interpreter) = {
+    val sqlContext = new org.apache.spark.sql.SQLContext(sparkContext)
+
+    interpreter.doQuietly {
+      logger.debug("Binding sql context into interpreter")
+      interpreter.bind(
+        "sqlContext", "org.apache.spark.sql.SQLContext",
+        sqlContext, List( """@transient"""))
+    }
+
+    sqlContext
   }
 }

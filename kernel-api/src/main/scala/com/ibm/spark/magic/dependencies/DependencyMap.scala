@@ -22,6 +22,7 @@ import com.ibm.spark.interpreter.Interpreter
 import com.ibm.spark.kernel.api.KernelLike
 import com.ibm.spark.magic.{MagicLoader, Magic}
 import org.apache.spark.SparkContext
+import org.apache.spark.sql.SQLContext
 
 import scala.reflect.runtime.universe._
 import com.ibm.spark.dependencies.DependencyDownloader
@@ -123,7 +124,7 @@ class DependencyMap {
 
   /**
    * Sets the MagicLoader for this map.
-   * @param kernel The new Kernel
+   * @param magicLoader The new Kernel
    */
   def setMagicLoader(magicLoader: MagicLoader) = {
     internalMap(typeOf[IncludeMagicLoader]) =
@@ -131,6 +132,22 @@ class DependencyMap {
         magic =>
           magic.asInstanceOf[IncludeMagicLoader]
             .magicLoader=(magicLoader)
+      )
+
+    this
+  }
+
+  //dt - Added this method
+  /**
+   * Sets the SQLContext for this map.
+   * @param sqlContext The new SQLContext
+   */
+  def setSqlContext(sqlContext: SQLContext) = {
+    internalMap(typeOf[IncludeSqlContext]) =
+      PartialFunction[Magic, Unit](
+        magic =>
+          magic.asInstanceOf[IncludeSqlContext]
+            .sqlContext=(sqlContext)
       )
 
     this

@@ -53,15 +53,24 @@ object Nightly {
   private val NightlyVersionPostfix = "-NIGHTLY"
 
   /**
-   * Returns the version in the form of year/month/day-NIGHTLY without the '/'.
+   * Calculates the nightly version using the current time.
+   *
+   * @return The nightly version as a string
    */
-  private lazy val _nightlyVersion = Def.setting {
+  private def calculateNightlyVersion(): String = {
     val simpleDateFormat = new SimpleDateFormat("yyyyMMdd")
     val today = Calendar.getInstance().getTime
 
     val dateString = simpleDateFormat.format(today)
 
     dateString + NightlyVersionPostfix
+  }
+
+  /**
+   * Returns the version in the form of year/month/day-NIGHTLY without the '/'.
+   */
+  private lazy val _nightlyVersion = Def.setting {
+    calculateNightlyVersion()
   }
 
   /**
@@ -100,7 +109,49 @@ object Nightly {
   )
 
   /**
+   * Represents the commands associated with the Nightly setup.
+   *
+   * @param config The configuration to use for the underlying commands
+   *
+   * @return The sequence of commands
+   */
+  def commandsForConfig(config: Configuration) = Seq(
+    Command.command("publish-nightly")(state => {
+      val newVersion = calculateNightlyVersion()
+      //val newRepository = (crossTarget.value / "nightly").getAbsolutePath
+      val newRepository = "/tmp/"
+
+      // Update the version to our nightly version
+      val s1 = Command.process(
+        s"""set version := "$newVersion"""",
+        state
+      )
+
+      // Update the repository to our nightly repository
+      val s2 = Command.process(
+        s"""set publishTo := Some("Nightly Repository" at "$newRepository")""",
+        s1
+      )
+
+      // Mark final state
+      val newState = s2
+
+      // Publish the nightly jars
+      val (finalState, _) = Project
+        .extract(newState)
+        .runTask(publish in config, newState)
+
+      finalState
+    })
+  )
+
+  /**
    * Default settings tied to Compile.
    */
   lazy val settings = settingsForConfig(Compile)
+
+  /**
+   * Default commands tied to Compile.
+   */
+  lazy val commands = commandsForConfig(Compile)
 }

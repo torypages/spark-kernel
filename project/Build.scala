@@ -39,7 +39,6 @@ object Build extends Build with Settings with SubProjects with TestTasks {
       settings = fullSettings
     ).settings(unidocSettings: _*)
      .settings(site.settings ++ ghpages.settings: _*)
-     .settings(Nightly.settings: _*)
      .settings(
         site.addMappingsToSiteDir(
           mappings in (ScalaUnidoc, packageDoc), "latest/api"
@@ -64,7 +63,10 @@ object Build extends Build with Settings with SubProjects with TestTasks {
  */
 trait Settings {
   lazy val fullSettings =
-    Common.settings ++ Seq(
+    Common.settings ++
+    Nightly.settings ++ Seq(
+      commands ++= Nightly.commands
+    ) ++ Seq(
       ScoverageSbtPlugin.ScoverageKeys.coverageHighlighting := false
     ) ++
     net.virtualvoid.sbt.graph.Plugin.graphSettings

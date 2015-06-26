@@ -11,6 +11,5 @@ crossPaths := false
 autoScalaLibrary := false
 
 libraryDependencies ++= Seq(
-  "org.apache.zeppelin" % "zeppelin-interpreter" % "0.6.0-incubating-SNAPSHOT",
-  "org.apache.zeppelin" % "zeppelin-spark" % "0.6.0-incubating-SNAPSHOT"
+  "org.apache.zeppelin" % "zeppelin-interpreter" % "0.6.0-incubating-SNAPSHOT"
 )

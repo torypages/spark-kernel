@@ -19,6 +19,7 @@ package com.ibm.spark.boot
 import akka.actor.{ActorRef, ActorSystem}
 import com.ibm.spark.boot.layer._
 import com.ibm.spark.interpreter.Interpreter
+import com.ibm.spark.kernel.api.KernelLike
 import com.ibm.spark.kernel.protocol.v5.KernelStatusType._
 import com.ibm.spark.kernel.protocol.v5._
 import com.ibm.spark.kernel.protocol.v5.kernel.ActorLoader
@@ -53,9 +54,17 @@ class KernelBootstrap(config: Config) extends LogLike {
   private var kernelMessageRelayActor: ActorRef = _
   private var statusDispatch: ActorRef          = _
 
+  private var kernel: KernelLike                = _
   private var sparkContext: SparkContext        = _
   private var interpreters: Seq[Interpreter]    = Nil
   private var magicLoader: MagicLoader          = _
+
+  /**
+   * Returns the Kernel API instance created during bootstrapping.
+   *
+   * @return The kernel API instance
+   */
+  def getKernel: KernelLike = kernel
 
   /**
    * Returns the Spark Context created during bootstrapping.
@@ -116,6 +125,7 @@ class KernelBootstrap(config: Config) extends LogLike {
         appName     = DefaultAppName,
         actorLoader = actorLoader
       )
+    this.kernel = kernel
     this.sparkContext = sparkContext
     this.interpreters ++= Seq(interpreter)
     this.magicLoader = magicLoader

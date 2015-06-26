@@ -1,15 +1,10 @@
 package com.ibm.spark.interpreter;
 
-import com.ibm.spark.boot.CommandLineOptions$;
+import com.ibm.spark.boot.CommandLineOptions;
 import com.ibm.spark.boot.KernelBootstrap$;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigValueFactory;
 import org.apache.zeppelin.interpreter.*;
 import org.apache.zeppelin.interpreter.Interpreter;
-import org.apache.zeppelin.spark.*;
-import scala.collection.Seq$;
-import scala.collection.immutable.List$;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -24,9 +19,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * </p>
  */
 public class KernelInterpreter extends Interpreter {
+    private final org.slf4j.Logger logger =
+            org.slf4j.LoggerFactory.getLogger(this.getClass());
+
     private com.ibm.spark.boot.KernelBootstrap kernelBootstrap;
+    private com.ibm.spark.kernel.api.KernelLike kernel;
     private com.ibm.spark.interpreter.Interpreter interpreter;
     private com.ibm.spark.magic.MagicLoader magicLoader;
+    private final List<String> arguments = new ArrayList<String>();
 
     /** Represents the progress on the current block of execution. */
     private AtomicInteger progress = new AtomicInteger(0);
@@ -63,14 +63,27 @@ public class KernelInterpreter extends Interpreter {
 
     public KernelInterpreter(java.util.Properties properties) {
         super(properties);
+
+        // Build up our argument list
+        for (String propertyName : properties.stringPropertyNames()) {
+            final String propertyValue =
+                    properties.getProperty(propertyName, "");
+            final String argumentString =
+                    "-S" + propertyName + "=" + propertyValue;
+            final String p = "(" + propertyName + ":" + propertyValue + ")";
+
+            logger.info("Using " + p + " as " + argumentString);
+            arguments.add(argumentString);
+        }
     }
 
     @Override
     public void open() {
         progress.set(0);
 
-        // Create an empty configuration
-        final Config config = CommandLineOptions$.MODULE$.empty().toConfig();
+        final Config config = new CommandLineOptions(
+                scala.collection.JavaConverters.asScalaBufferConverter(arguments).asScala().toList()
+        ).toConfig();
 
         // Stand up a Spark Kernel without the Spark Context
         kernelBootstrap = KernelBootstrap$.MODULE$.standardKernelBootstrap(
@@ -83,11 +96,18 @@ public class KernelInterpreter extends Interpreter {
         final java.util.List<com.ibm.spark.interpreter.Interpreter> interpreters =
                 scala.collection.JavaConverters.asJavaListConverter(kernelBootstrap.getInterpreters()).asJava();
 
+        // Retrieve the kernel instance created by the bootstrapping
+        kernel = kernelBootstrap.getKernel();
+
         // Use the first interpreter to represent this Zeppelin interface
         interpreter = interpreters.get(0);
 
         // Retrieve the magic loader used by the kernel
         magicLoader = kernelBootstrap.getMagicLoader();
+
+        // TODO: This is a hack since we are getting null for our output stream
+        // NOTE: The output is not being picked up by Zeppelin frontend
+        magicLoader.dependencyMap().setOutputStream(System.out);
 
         // Start the increment progress thread
         progressThread.start();
@@ -97,6 +117,7 @@ public class KernelInterpreter extends Interpreter {
     public void close() {
         assert magicLoader != null : "Spark Kernel magic loader not created!";
         assert interpreter != null : "Spark Kernel interpreter not started!";
+        assert kernel != null : "Spark Kernel API not created!";
         assert kernelBootstrap != null : "Spark Kernel not bootstrapped!";
 
         progressThread.interrupt();
@@ -104,6 +125,7 @@ public class KernelInterpreter extends Interpreter {
 
         magicLoader = null;
         interpreter = null;
+        kernel = null;
         kernelBootstrap = null;
     }
 

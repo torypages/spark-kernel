@@ -28,6 +28,7 @@ import com.ibm.spark.security.KernelSecurityManager
 import com.ibm.spark.utils.LogLike
 import com.typesafe.config.Config
 import org.apache.spark.SparkContext
+import org.apache.spark.sql.SQLContext
 import org.zeromq.ZMQ
 
 object KernelBootstrap {
@@ -56,6 +57,7 @@ class KernelBootstrap(config: Config) extends LogLike {
 
   private var kernel: KernelLike                = _
   private var sparkContext: SparkContext        = _
+  private var sqlContext: SQLContext            = _
   private var interpreters: Seq[Interpreter]    = Nil
   private var magicLoader: MagicLoader          = _
 
@@ -72,6 +74,13 @@ class KernelBootstrap(config: Config) extends LogLike {
    * @return The Spark Context
    */
   def getSparkContext: SparkContext = sparkContext
+
+  /**
+   * Returns the Spark SQL Context created during bootstrapping.
+   *
+   * @return The Spark SQL Context
+   */
+  def getSqlContext: SQLContext = sqlContext
 
   /**
    * Returns all interpreters created during the bootstrapping.
@@ -118,7 +127,7 @@ class KernelBootstrap(config: Config) extends LogLike {
 
     // Initialize components needed elsewhere
     val (commStorage, commRegistrar, commManager, interpreter,
-      kernel, sparkContext, dependencyDownloader,
+      kernel, sparkContext, sqlContext, dependencyDownloader,
       magicLoader, responseMap) =
       initializeComponents(
         config      = config,
@@ -127,6 +136,7 @@ class KernelBootstrap(config: Config) extends LogLike {
       )
     this.kernel = kernel
     this.sparkContext = sparkContext
+    this.sqlContext = sqlContext
     this.interpreters ++= Seq(interpreter)
     this.magicLoader = magicLoader
 

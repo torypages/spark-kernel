@@ -32,6 +32,7 @@ import com.ibm.spark.magic.builtin.BuiltinLoader
 import com.ibm.spark.magic.dependencies.DependencyMap
 import com.ibm.spark.utils.{MultiClassLoader, TaskManager, KeyValuePairUtils, LogLike}
 import com.typesafe.config.Config
+import org.apache.spark.sql.SQLContext
 import org.apache.spark.{SparkContext, SparkConf}
 
 import scala.collection.JavaConverters._
@@ -53,7 +54,7 @@ trait ComponentInitialization {
   def initializeComponents(
     config: Config, appName: String, actorLoader: ActorLoader
   ): (CommStorage, CommRegistrar, CommManager, Interpreter,
-    Kernel, SparkContext, DependencyDownloader, MagicLoader,
+    Kernel, SparkContext, SQLContext, DependencyDownloader, MagicLoader,
     collection.mutable.Map[String, ActorRef])
 }
 
@@ -76,14 +77,15 @@ trait StandardComponentInitialization extends ComponentInitialization {
     val (commStorage, commRegistrar, commManager) =
       initializeCommObjects(actorLoader)
     val interpreter = initializeInterpreter(config)
-    val sparkContext = if (config.getBoolean("create_spark_context")) {
-      logger.info("Preparing to create a Spark context!")
-      initializeSparkContext(
-        config, appName, actorLoader, interpreter)
-    } else {
-      logger.info("Not creating a Spark context!")
-      null
-    }
+    val (sparkContext, sqlContext) =
+      if (config.getBoolean("create_spark_context")) {
+        logger.info("Preparing to create a Spark context!")
+        initializeSparkContext(
+          config, appName, actorLoader, interpreter)
+      } else {
+        logger.info("Not creating a Spark context!")
+        (null, null)
+      }
     val dependencyDownloader = initializeDependencyDownloader(config)
     val magicLoader = initializeMagicLoader(
       config, interpreter, sparkContext, dependencyDownloader)
@@ -91,7 +93,7 @@ trait StandardComponentInitialization extends ComponentInitialization {
       actorLoader, interpreter, commManager, magicLoader)
     val responseMap = initializeResponseMap()
     (commStorage, commRegistrar, commManager, interpreter, kernel,
-      sparkContext, dependencyDownloader, magicLoader, responseMap)
+      sparkContext, sqlContext, dependencyDownloader, magicLoader, responseMap)
   }
 
   private def initializeCommObjects(actorLoader: ActorLoader) = {
@@ -141,7 +143,7 @@ trait StandardComponentInitialization extends ComponentInitialization {
   protected[layer] def initializeSparkContext(
     config: Config, appName: String, actorLoader: ActorLoader,
     interpreter: Interpreter
-  ) = {
+  ): (SparkContext, SQLContext) = {
     logger.debug("Creating Spark Configuration")
     val conf = new SparkConf()
 
@@ -173,7 +175,10 @@ trait StandardComponentInitialization extends ComponentInitialization {
     updateInterpreterWithSparkContext(
       config, sparkContext, interpreter)
 
-    sparkContext
+    val sqlContext = new SQLContext(sparkContext)
+    updateInterpreterWithSqlContext(sqlContext, interpreter)
+
+    (sparkContext, sqlContext)
   }
 
   // TODO: Think of a better way to test without exposing this
@@ -194,6 +199,19 @@ trait StandardComponentInitialization extends ComponentInitialization {
     }
 
     sparkContext
+  }
+
+  // TODO: Think of a better way to test without exposing this
+  protected[layer] def updateInterpreterWithSqlContext(
+    sqlContext: SQLContext, interpreter: Interpreter
+  ) = {
+    interpreter.doQuietly {
+      logger.debug("Binding sql context into interpreter")
+      interpreter.bind(
+        "sqlContext", "org.apache.spark.sql.SQLContext",
+        sqlContext, List( """@transient""")
+      )
+    }
   }
 
   // TODO: Think of a better way to test without exposing this

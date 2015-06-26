@@ -1,3 +1,18 @@
+/*
+ * Copyright 2015 IBM Corp.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 package com.ibm.spark.interpreter;
 
 import com.ibm.spark.boot.CommandLineOptions;
@@ -23,34 +38,38 @@ public class KernelInterpreter extends Interpreter {
             org.slf4j.LoggerFactory.getLogger(this.getClass());
 
     private com.ibm.spark.boot.KernelBootstrap kernelBootstrap;
+    public com.ibm.spark.boot.KernelBootstrap getKernelBootstrap() {
+        return kernelBootstrap;
+    }
+
     private com.ibm.spark.kernel.api.KernelLike kernel;
+    public com.ibm.spark.kernel.api.KernelLike getKernel() {
+        return kernel;
+    }
+
+    private org.apache.spark.SparkContext sparkContext;
+    public org.apache.spark.SparkContext getSparkContext() {
+        return sparkContext;
+    }
+
+    private org.apache.spark.sql.SQLContext sqlContext;
+    public org.apache.spark.sql.SQLContext getSqlContext() {
+        return sqlContext;
+    }
+
     private com.ibm.spark.interpreter.Interpreter interpreter;
+    public com.ibm.spark.interpreter.Interpreter getInterpreter() {
+        return interpreter;
+    }
+
     private com.ibm.spark.magic.MagicLoader magicLoader;
+    public com.ibm.spark.magic.MagicLoader getMagicLoader() {
+        return magicLoader;
+    }
+
+    private final ProgressRunner progressRunner = new ProgressRunner();
+
     private final List<String> arguments = new ArrayList<String>();
-
-    /** Represents the progress on the current block of execution. */
-    private AtomicInteger progress = new AtomicInteger(0);
-
-    /** Represents the flag that is checked regarding incrementing progress. */
-    private AtomicBoolean incrementProgress = new AtomicBoolean(false);
-
-    /** When flag is set, increments progress up to 100 once per second. */
-    private final Thread progressThread = new Thread(new Runnable() {
-        @Override
-        public void run() {
-            while (!Thread.interrupted()) try {
-                if (incrementProgress.get() && progress.intValue() < 100) {
-                    progress.incrementAndGet();
-                } else {
-                    progress.set(0);
-                }
-
-                Thread.sleep(1000L);
-            } catch (InterruptedException ex) {
-                return; // Should exit if interrupted
-            }
-        }
-    });
 
     // Register our interpreter for Zeppelin to see
     static {
@@ -79,7 +98,7 @@ public class KernelInterpreter extends Interpreter {
 
     @Override
     public void open() {
-        progress.set(0);
+        progressRunner.clearProgress();
 
         final Config config = new CommandLineOptions(
                 scala.collection.JavaConverters.asScalaBufferConverter(arguments).asScala().toList()
@@ -90,7 +109,7 @@ public class KernelInterpreter extends Interpreter {
                 config
         ).initialize();
 
-        progress.set(25);
+        progressRunner.setProgress(25);
 
         // Get the collection of interpreters
         final java.util.List<com.ibm.spark.interpreter.Interpreter> interpreters =
@@ -98,6 +117,12 @@ public class KernelInterpreter extends Interpreter {
 
         // Retrieve the kernel instance created by the bootstrapping
         kernel = kernelBootstrap.getKernel();
+
+        // Retrieve the Spark Context created by the bootstrapping
+        sparkContext = kernelBootstrap.getSparkContext();
+
+        // Retrieve the SQL Context created by the bootstrapping
+        sqlContext = kernelBootstrap.getSqlContext();
 
         // Use the first interpreter to represent this Zeppelin interface
         interpreter = interpreters.get(0);
@@ -108,9 +133,6 @@ public class KernelInterpreter extends Interpreter {
         // TODO: This is a hack since we are getting null for our output stream
         // NOTE: The output is not being picked up by Zeppelin frontend
         magicLoader.dependencyMap().setOutputStream(System.out);
-
-        // Start the increment progress thread
-        progressThread.start();
     }
 
     @Override
@@ -120,7 +142,7 @@ public class KernelInterpreter extends Interpreter {
         assert kernel != null : "Spark Kernel API not created!";
         assert kernelBootstrap != null : "Spark Kernel not bootstrapped!";
 
-        progressThread.interrupt();
+        progressRunner.stop();
         interpreter.stop();
 
         magicLoader = null;
@@ -134,15 +156,15 @@ public class KernelInterpreter extends Interpreter {
         assert interpreter != null : "Spark Kernel interpreter not started!";
 
         // Reset progress if not originating from an "open()"
-        progress.compareAndSet(100, 0);
+        progressRunner.clearIfMax();
 
         // Mark progress to begin being incremented and then interpret our code
-        incrementProgress.set(true);
+        progressRunner.turnOnIncrement();
         final scala.util.Either<String, com.ibm.spark.interpreter.ExecuteFailure> results =
                 interpreter.interpret(s, false)._2();
 
-        incrementProgress.set(false);
-        progress.set(100);
+        progressRunner.turnOffIncrement();
+        progressRunner.maximizeProgress();
         if (results.isLeft()) {
             return new InterpreterResult(InterpreterResult.Code.SUCCESS, results.left().get());
         } else {
@@ -164,7 +186,7 @@ public class KernelInterpreter extends Interpreter {
 
     @Override
     public int getProgress(InterpreterContext interpreterContext) {
-        return progress.intValue();
+        return progressRunner.getProgress();
     }
 
     @Override

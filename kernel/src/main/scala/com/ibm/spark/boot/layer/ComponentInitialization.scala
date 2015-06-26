@@ -76,8 +76,14 @@ trait StandardComponentInitialization extends ComponentInitialization {
     val (commStorage, commRegistrar, commManager) =
       initializeCommObjects(actorLoader)
     val interpreter = initializeInterpreter(config)
-    val sparkContext = initializeSparkContext(
-      config, appName, actorLoader, interpreter)
+    val sparkContext = if (config.getBoolean("create_spark_context")) {
+      logger.info("Preparing to create a Spark context!")
+      initializeSparkContext(
+        config, appName, actorLoader, interpreter)
+    } else {
+      logger.info("Not creating a Spark context!")
+      null
+    }
     val dependencyDownloader = initializeDependencyDownloader(config)
     val magicLoader = initializeMagicLoader(
       config, interpreter, sparkContext, dependencyDownloader)

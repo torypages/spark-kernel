@@ -52,7 +52,7 @@ object Build extends Build with Settings with SubProjects with TestTasks {
         publishArtifact := false,
         publishLocal := {}
       )
-  ).aggregate(client, kernel, kernel_api, communication, protocol, macros).dependsOn(
+  ).aggregate(client, zeppelin_backend, kernel, kernel_api, communication, protocol, macros).dependsOn(
     client % "test->test",
     kernel % "test->test"
   )
@@ -102,6 +102,22 @@ trait SubProjects extends Settings with TestTasks {
     communication % "test->test;compile->compile",
     kernel_api % "test->test;compile->compile"
   )
+
+  /** Represents a kernel powering Zeppelin. */
+  lazy val zeppelin_backend = addTestTasksToProject(Project(
+    id = "zeppelin-backend",
+    base = file("zeppelin-backend"),
+    settings = fullSettings ++ packSettings ++ Seq(
+      packMain := Map("zeppelinkernel" -> "com.ibm.spark.ZeppelinKernel")
+    )
+  )) dependsOn(
+    macros % "test->test;compile->compile",
+    protocol % "test->test;compile->compile",
+    communication % "test->test;compile->compile",
+    kernel_api % "test->test;compile->compile",
+    kernel % "test->test;compile->compile"
+  )
+
 
   /**
    * Project representing the kernel-api code used by the Spark Kernel. Others can

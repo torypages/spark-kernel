@@ -22,11 +22,24 @@ import com.ibm.spark.interpreter.Interpreter
 import com.ibm.spark.kernel.protocol.v5.KernelStatusType._
 import com.ibm.spark.kernel.protocol.v5._
 import com.ibm.spark.kernel.protocol.v5.kernel.ActorLoader
+import com.ibm.spark.magic.MagicLoader
 import com.ibm.spark.security.KernelSecurityManager
 import com.ibm.spark.utils.LogLike
 import com.typesafe.config.Config
 import org.apache.spark.SparkContext
 import org.zeromq.ZMQ
+
+object KernelBootstrap {
+  def standardKernelBootstrap(config: Config): KernelBootstrap =
+    new KernelBootstrap(config)
+      with StandardBareInitialization
+      with StandardComponentInitialization
+      with StandardHandlerInitialization
+      with StandardHookInitialization
+
+  def standardKernelBootstrap(): KernelBootstrap =
+    standardKernelBootstrap(CommandLineOptions.empty.toConfig)
+}
 
 class KernelBootstrap(config: Config) extends LogLike {
   this: BareInitialization with ComponentInitialization
@@ -42,6 +55,28 @@ class KernelBootstrap(config: Config) extends LogLike {
 
   private var sparkContext: SparkContext        = _
   private var interpreters: Seq[Interpreter]    = Nil
+  private var magicLoader: MagicLoader          = _
+
+  /**
+   * Returns the Spark Context created during bootstrapping.
+   *
+   * @return The Spark Context
+   */
+  def getSparkContext: SparkContext = sparkContext
+
+  /**
+   * Returns all interpreters created during the bootstrapping.
+   *
+   * @return The collection of interpreters
+   */
+  def getInterpreters: Seq[Interpreter] = interpreters
+
+  /**
+   * Returns the magic loader created during bootstrapping.
+   *
+   * @return The magic loader
+   */
+  def getMagicLoader: MagicLoader = magicLoader
 
   /**
    * Initializes all kernel systems.
@@ -83,6 +118,7 @@ class KernelBootstrap(config: Config) extends LogLike {
       )
     this.sparkContext = sparkContext
     this.interpreters ++= Seq(interpreter)
+    this.magicLoader = magicLoader
 
     // Initialize our handlers that take care of processing messages
     initializeHandlers(

@@ -25,6 +25,10 @@ import joptsimple.{OptionParser, OptionSpec}
 
 import scala.collection.JavaConverters._
 
+object CommandLineOptions {
+  lazy val empty = new CommandLineOptions(Nil)
+}
+
 class CommandLineOptions(args: Seq[String]) {
   private val parser = new OptionParser()
   parser.allowsUnrecognizedOptions()

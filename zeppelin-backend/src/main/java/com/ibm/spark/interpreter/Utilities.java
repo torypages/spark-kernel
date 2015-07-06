@@ -41,4 +41,34 @@ public class Utilities {
         return null;
     }
 
+    /**
+     * Constructs an error message from the given exception.
+     *
+     * @param exception The exception whose message to construct
+     *
+     * @return The name, message, and stack trace of the exception as a string
+     */
+    static String buildErrorMessage(Exception exception) {
+        final StringBuilder messageBuilder = new StringBuilder();
+
+        // Use exception class as name of error
+        messageBuilder.append("Name: ");
+        messageBuilder.append(exception.getClass().getName());
+        messageBuilder.append("\n");
+
+        // Display localized message if available
+        messageBuilder.append("Message: ");
+        messageBuilder.append(exception.getLocalizedMessage());
+        messageBuilder.append("\n");
+
+        // Build stack trace treating each element as a new line
+        messageBuilder.append("Stack Trace: ");
+        for (StackTraceElement ste : exception.getStackTrace()) {
+            messageBuilder.append(ste.toString());
+            messageBuilder.append("\n");
+        }
+        messageBuilder.append("\n");
+
+        return messageBuilder.toString();
+    }
 }

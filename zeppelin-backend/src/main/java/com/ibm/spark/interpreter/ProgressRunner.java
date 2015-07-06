@@ -24,17 +24,17 @@ public class ProgressRunner {
     private final Thread progressThread = new Thread(new Runnable() {
         @Override
         public void run() {
-            while (!Thread.interrupted()) try {
-                if (incrementProgress.get() && getProgress() < MAX_PROGRESS) {
-                    progress.incrementAndGet();
-                } else if (wrapProgress) {
-                    progress.set(MIN_PROGRESS);
-                }
-
-                Thread.sleep(PROGRESS_INCREMENT);
-            } catch (InterruptedException ex) {
-                return; // Should exit if interrupted
+        while (!Thread.interrupted()) try {
+            if (incrementProgress.get() && getProgress() < MAX_PROGRESS) {
+                progress.incrementAndGet();
+            } else if (wrapProgress) {
+                progress.set(MIN_PROGRESS);
             }
+
+            Thread.sleep(PROGRESS_INCREMENT);
+        } catch (InterruptedException ex) {
+            return; // Should exit if interrupted
+        }
         }
     });
 

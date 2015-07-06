@@ -44,7 +44,9 @@ object InterpreterActor {
 // Does this mean that the interpreter instance is not gc and is passed in?
 //
 class InterpreterActor(
-  interpreterTaskFactory: InterpreterTaskFactory
+  private val interpreterTaskFactory: InterpreterTaskFactory,
+  private val captureStandardOut: Boolean,
+  private val captureStandardErr: Boolean
 ) extends Actor with LogLike {
   // NOTE: Required to provide the execution context for futures with akka
   import context._
@@ -61,9 +63,13 @@ class InterpreterActor(
   /**
    * Initializes all child actors performing tasks for the interpreter.
    */
-  override def preStart = {
+  override def preStart() = {
     executeRequestTask = interpreterTaskFactory.ExecuteRequestTask(
-      context, InterpreterChildActorType.ExecuteRequestTask.toString)
+      context,
+      InterpreterChildActorType.ExecuteRequestTask.toString,
+      captureStandardOut = captureStandardOut,
+      captureStandardErr = captureStandardErr
+    )
     completeCodeTask = interpreterTaskFactory.CodeCompleteTask(
       context, InterpreterChildActorType.CodeCompleteTask.toString)
   }

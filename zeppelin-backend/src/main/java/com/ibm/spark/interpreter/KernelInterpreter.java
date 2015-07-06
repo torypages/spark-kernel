@@ -21,6 +21,8 @@ import com.typesafe.config.Config;
 import org.apache.zeppelin.interpreter.*;
 import org.apache.zeppelin.interpreter.Interpreter;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class KernelInterpreter extends Interpreter {
     private final org.slf4j.Logger logger =
-            org.slf4j.LoggerFactory.getLogger(this.getClass());
+        org.slf4j.LoggerFactory.getLogger(this.getClass());
 
     private com.ibm.spark.boot.KernelBootstrap kernelBootstrap;
     public com.ibm.spark.boot.KernelBootstrap getKernelBootstrap() {
@@ -74,9 +76,9 @@ public class KernelInterpreter extends Interpreter {
     // Register our interpreter for Zeppelin to see
     static {
         Interpreter.register(
-                "sparkkernel",
-                "kernel",
-                KernelInterpreter.class.getName()
+            "sparkkernel",
+            "kernel",
+            KernelInterpreter.class.getName()
         );
     }
 
@@ -86,13 +88,19 @@ public class KernelInterpreter extends Interpreter {
         // Build up our argument list
         for (String propertyName : properties.stringPropertyNames()) {
             final String propertyValue =
-                    properties.getProperty(propertyName, "");
-            final String argumentString =
-                    "-S" + propertyName + "=" + propertyValue;
-            final String p = "(" + propertyName + ":" + propertyValue + ")";
+                properties.getProperty(propertyName, "");
 
-            logger.info("Using " + p + " as " + argumentString);
-            arguments.add(argumentString);
+            if (propertyName.equals("args")) {
+                logger.info("Detected arguments: " + propertyValue);
+                arguments.addAll(Arrays.asList(propertyValue.split(" ")));
+            } else {
+                final String argumentString =
+                    "-S" + propertyName + "=" + propertyValue;
+                final String p = "(" + propertyName + ":" + propertyValue + ")";
+
+                logger.info("Using " + p + " as " + argumentString);
+                arguments.add(argumentString);
+            }
         }
     }
 
@@ -101,8 +109,12 @@ public class KernelInterpreter extends Interpreter {
         progressRunner.clearProgress();
 
         final Config config = new CommandLineOptions(
-                scala.collection.JavaConverters.asScalaBufferConverter(arguments).asScala().toList()
+            scala.collection.JavaConverters.asScalaBufferConverter(arguments).asScala().toList()
         ).toConfig();
+
+
+        logger.info("CAPTURE STANDARD OUT: " + config.getBoolean("capture_standard_out"));
+        logger.info("CAPTURE STANDARD ERR: " + config.getBoolean("capture_standard_err"));
 
         // Stand up a Spark Kernel without the Spark Context
         kernelBootstrap = KernelBootstrap$.MODULE$.standardKernelBootstrap(
@@ -113,7 +125,7 @@ public class KernelInterpreter extends Interpreter {
 
         // Get the collection of interpreters
         final java.util.List<com.ibm.spark.interpreter.Interpreter> interpreters =
-                scala.collection.JavaConverters.asJavaListConverter(kernelBootstrap.getInterpreters()).asJava();
+            scala.collection.JavaConverters.asJavaListConverter(kernelBootstrap.getInterpreters()).asJava();
 
         // Retrieve the kernel instance created by the bootstrapping
         kernel = kernelBootstrap.getKernel();
@@ -161,7 +173,7 @@ public class KernelInterpreter extends Interpreter {
         // Mark progress to begin being incremented and then interpret our code
         progressRunner.turnOnIncrement();
         final scala.util.Either<String, com.ibm.spark.interpreter.ExecuteFailure> results =
-                interpreter.interpret(s, false)._2();
+            interpreter.interpret(s, false)._2();
 
         progressRunner.turnOffIncrement();
         progressRunner.maximizeProgress();
@@ -194,7 +206,7 @@ public class KernelInterpreter extends Interpreter {
         assert interpreter != null : "Spark Kernel interpreter not started!";
 
         final scala.collection.Seq<String> results =
-                interpreter.completion(s, i)._2();
+            interpreter.completion(s, i)._2();
         return scala.collection.JavaConverters.asJavaListConverter(results).asJava();
     }
 }

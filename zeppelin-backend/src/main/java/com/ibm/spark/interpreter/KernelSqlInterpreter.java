@@ -43,9 +43,9 @@ public class KernelSqlInterpreter extends Interpreter {
     // Register our interpreter for Zeppelin to see
     static {
         Interpreter.register(
-                "sparkkernelsql",
-                "kernel",
-                KernelSqlInterpreter.class.getName()
+            "sparkkernelsql",
+            "kernel",
+            KernelSqlInterpreter.class.getName()
         );
     }
 
@@ -58,8 +58,8 @@ public class KernelSqlInterpreter extends Interpreter {
         progressRunner.clearProgress();
 
         this.kernelInterpreter = Utilities.findInterpreter(
-                KernelInterpreter.class,
-                getInterpreterGroup()
+            KernelInterpreter.class,
+            getInterpreterGroup()
         );
 
         progressRunner.setProgress(25);
@@ -72,7 +72,7 @@ public class KernelSqlInterpreter extends Interpreter {
     @Override
     public void close() {
         assert kernelInterpreter != null :
-                "Zeppelin Spark Kernel interpreter not created!";
+            "Zeppelin Spark Kernel interpreter not created!";
         assert sqlContext != null : "SQL Context not created!";
 
         System.out.println("CLOSE!!!");
@@ -92,34 +92,30 @@ public class KernelSqlInterpreter extends Interpreter {
         // Mark progress to begin being incremented and then interpret our code
         progressRunner.turnOnIncrement();
         try {
+            System.out.println("Setting pool size to null!");
+            this.sqlContext.sparkContext()
+                .setLocalProperty("spark.scheduler.pool", null);
+
             System.out.println("SQL: " + s);
             System.out.println("SQLContext: " + this.sqlContext);
             final DataFrame results = this.sqlContext.sql(s);
             System.out.println("Done SQL!");
             final String output = org.apache.zeppelin.spark.ZeppelinContext.showRDD(
-                    sqlContext.sparkContext(),
-                    interpreterContext,
-                    results,
-                    MAX_RESULTS
+                sqlContext.sparkContext(),
+                interpreterContext,
+                results,
+                MAX_RESULTS
             );
             System.out.println("Showing: " + output);
             return new InterpreterResult(
-                    org.apache.zeppelin.interpreter.InterpreterResult.Code.SUCCESS,
-                    output
+                org.apache.zeppelin.interpreter.InterpreterResult.Code.SUCCESS,
+                output
             );
         } catch (Exception ex) {
-            final StringBuilder stackTraceBuilder = new StringBuilder();
-            for (StackTraceElement ste : ex.getStackTrace()) {
-                stackTraceBuilder.append(ste.toString() + "\n");
-            }
-
-            final String message =
-                    "Name: " + ex.getClass().getName() + "\n" +
-                    "Message: " + ex.getLocalizedMessage() + "\n" +
-                    "Stack Trace: " + stackTraceBuilder.toString();
+            final String message = Utilities.buildErrorMessage(ex);
             return new InterpreterResult(
-                    org.apache.zeppelin.interpreter.InterpreterResult.Code.ERROR,
-                    message
+                org.apache.zeppelin.interpreter.InterpreterResult.Code.ERROR,
+                message
             );
         } finally {
             progressRunner.turnOffIncrement();

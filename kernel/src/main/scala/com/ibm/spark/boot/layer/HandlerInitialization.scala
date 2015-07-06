@@ -30,6 +30,7 @@ import com.ibm.spark.kernel.protocol.v5.relay.ExecuteRequestRelay
 import com.ibm.spark.kernel.protocol.v5.{MessageType, SocketType, SystemActorType}
 import com.ibm.spark.magic.MagicLoader
 import com.ibm.spark.utils.LogLike
+import com.typesafe.config.Config
 
 /**
  * Represents the Akka handler initialization. All actors (not needed in bare
@@ -39,6 +40,7 @@ trait HandlerInitialization {
   /**
    * Initializes and registers all handlers.
    *
+   * @param config The configuration associated with the kernel
    * @param actorSystem The actor system needed for registration
    * @param actorLoader The actor loader needed for registration
    * @param interpreter The main interpreter needed for registration
@@ -47,6 +49,7 @@ trait HandlerInitialization {
    * @param commStorage The comm storage needed for registration
    */
   def initializeHandlers(
+    config: Config,
     actorSystem: ActorSystem, actorLoader: ActorLoader,
     interpreter: Interpreter, magicLoader: MagicLoader,
     commRegistrar: CommRegistrar, commStorage: CommStorage,
@@ -63,6 +66,7 @@ trait StandardHandlerInitialization extends HandlerInitialization {
   /**
    * Initializes and registers all handlers.
    *
+   * @param config The configuration associated with the kernel
    * @param actorSystem The actor system needed for registration
    * @param actorLoader The actor loader needed for registration
    * @param interpreter The main interpreter needed for registration
@@ -71,6 +75,7 @@ trait StandardHandlerInitialization extends HandlerInitialization {
    * @param commStorage The comm storage needed for registration
    */
   def initializeHandlers(
+    config: Config,
     actorSystem: ActorSystem, actorLoader: ActorLoader,
     interpreter: Interpreter, magicLoader: MagicLoader,
     commRegistrar: CommRegistrar, commStorage: CommStorage,
@@ -78,16 +83,35 @@ trait StandardHandlerInitialization extends HandlerInitialization {
   ): Unit = {
     initializeKernelHandlers(
       actorSystem, actorLoader, commRegistrar, commStorage, responseMap)
-    initializeSystemActors(actorSystem, actorLoader, interpreter, magicLoader)
+    initializeSystemActors(
+      config,
+      actorSystem,
+      actorLoader,
+      interpreter,
+      magicLoader
+    )
   }
 
   private def initializeSystemActors(
+    config: Config,
     actorSystem: ActorSystem, actorLoader: ActorLoader,
     interpreter: Interpreter, magicLoader: MagicLoader
   ): Unit = {
-    logger.debug("Creating interpreter actor")
+    val captureStandardOut = config.getBoolean("capture_standard_out")
+    val captureStandardErr = config.getBoolean("capture_standard_err")
+
+    logger.info(Seq(
+      "Creating interpreter actor",
+      if (captureStandardOut) "[capturing standard out]" else "",
+      if (captureStandardErr) "[capturing standard err]" else ""
+    ).mkString(" "))
     val interpreterActor = actorSystem.actorOf(
-      Props(classOf[InterpreterActor], new InterpreterTaskFactory(interpreter)),
+      Props(
+        classOf[InterpreterActor],
+        new InterpreterTaskFactory(interpreter),
+        captureStandardOut,
+        captureStandardErr
+      ),
       name = SystemActorType.Interpreter.toString
     )
 

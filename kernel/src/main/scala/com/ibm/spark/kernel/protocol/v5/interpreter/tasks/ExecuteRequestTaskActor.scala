@@ -28,11 +28,23 @@ import com.ibm.spark.security.KernelSecurityManager
 import com.ibm.spark.utils.{ConditionalOutputStream, MultiOutputStream, LogLike}
 
 object ExecuteRequestTaskActor {
-  def props(interpreter: Interpreter): Props =
-    Props(classOf[ExecuteRequestTaskActor], interpreter)
+  def props(
+    interpreter: Interpreter,
+    captureStandardOut: Boolean,
+    captureStandardErr: Boolean
+  ): Props = Props(
+    classOf[ExecuteRequestTaskActor],
+    interpreter,
+    captureStandardOut,
+    captureStandardErr
+  )
 }
 
-class ExecuteRequestTaskActor(interpreter: Interpreter) extends Actor with LogLike {
+class ExecuteRequestTaskActor(
+  private val interpreter: Interpreter,
+  private val captureStandardOut: Boolean,
+  private val captureStandardErr: Boolean
+) extends Actor with LogLike {
   require(interpreter != null)
 
   override def receive: Receive = {
@@ -42,8 +54,12 @@ class ExecuteRequestTaskActor(interpreter: Interpreter) extends Actor with LogLi
       if(executeRequest.code.trim != "") {
         //interpreter.updatePrintStreams(System.in, outputStream, outputStream)
         val newInputStream = System.in
-        val newOutputStream = buildOutputStream(outputStream, System.out)
-        val newErrorStream = buildOutputStream(outputStream, System.err)
+        val newOutputStream =
+          if (captureStandardOut) buildOutputStream(outputStream, System.out)
+          else StreamState.getBaseStreams._2
+        val newErrorStream =
+          if (captureStandardErr) buildOutputStream(outputStream, System.err)
+          else StreamState.getBaseStreams._3
 
         // Update our global streams to be used by future output
         // NOTE: This is not async-safe! This is expected to be broken when

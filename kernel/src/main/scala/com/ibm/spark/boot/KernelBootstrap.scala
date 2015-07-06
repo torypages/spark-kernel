@@ -43,7 +43,7 @@ object KernelBootstrap {
     standardKernelBootstrap(CommandLineOptions.empty.toConfig)
 }
 
-class KernelBootstrap(config: Config) extends LogLike {
+class KernelBootstrap(private val config: Config) extends LogLike {
   this: BareInitialization with ComponentInitialization
     with HandlerInitialization with HookInitialization =>
 
@@ -142,6 +142,7 @@ class KernelBootstrap(config: Config) extends LogLike {
 
     // Initialize our handlers that take care of processing messages
     initializeHandlers(
+      config        = config,
       actorSystem   = actorSystem,
       actorLoader   = actorLoader,
       interpreter   = interpreter,

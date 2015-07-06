@@ -175,10 +175,39 @@ trait StandardComponentInitialization extends ComponentInitialization {
     updateInterpreterWithSparkContext(
       config, sparkContext, interpreter)
 
-    val sqlContext = new SQLContext(sparkContext)
+    val sqlContext = initializeSqlContext(sparkContext)
+
     updateInterpreterWithSqlContext(sqlContext, interpreter)
 
     (sparkContext, sqlContext)
+  }
+
+  // TODO: Think of a better way to test without exposing this
+  protected[layer] def initializeSqlContext(
+    sparkContext: SparkContext
+  ): SQLContext = {
+    try {
+      logger.info("Attempting to create Hive Context")
+      val hiveContextClassString =
+        "org.apache.spark.sql.hive.HiveContext"
+
+      logger.debug(s"Looking up $hiveContextClassString")
+      val hiveContextClass = Class.forName(hiveContextClassString)
+
+      val sparkContextClass = classOf[SparkContext]
+      val sparkContextClassName = sparkContextClass.getName
+
+      logger.debug(s"Searching for constructor taking $sparkContextClassName")
+      val hiveContextContructor =
+        hiveContextClass.getConstructor(sparkContextClass)
+
+      logger.debug("Invoking Hive Context constructor")
+      hiveContextContructor.newInstance(sparkContext).asInstanceOf[SQLContext]
+    } catch {
+      case _: Throwable =>
+        logger.warn("Unable to create Hive Context! Defaulting to SQL Context!")
+        new SQLContext(sparkContext)
+    }
   }
 
   // TODO: Think of a better way to test without exposing this

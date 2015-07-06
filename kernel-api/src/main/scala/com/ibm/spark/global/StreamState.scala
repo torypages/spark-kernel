@@ -55,6 +55,14 @@ object StreamState {
   }
 
   /**
+   * Retrieves the base (original) input and output streams.
+   *
+   * @return The input, output, and error streams
+   */
+  def getBaseStreams: (InputStream, OutputStream, OutputStream) =
+    (_baseInputStream, _baseOutputStream, _baseErrorStream)
+
+  /**
    * Sets the internal streams to be used with the stream block.
    *
    * @param inputStream The input stream to map standard in

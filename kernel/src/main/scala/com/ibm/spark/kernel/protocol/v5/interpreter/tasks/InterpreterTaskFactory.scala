@@ -25,8 +25,19 @@ class InterpreterTaskFactory(interpreter: Interpreter) {
    * @param actorRefFactory The factory used to task actor will belong
    * @return The ActorRef created for the task
    */
-  def ExecuteRequestTask(actorRefFactory: ActorRefFactory, name: String): ActorRef =
-    actorRefFactory.actorOf(ExecuteRequestTaskActor.props(interpreter), name)
+  def ExecuteRequestTask(
+    actorRefFactory: ActorRefFactory,
+    name: String,
+    captureStandardOut: Boolean,
+    captureStandardErr: Boolean
+  ): ActorRef = actorRefFactory.actorOf(
+    ExecuteRequestTaskActor.props(
+      interpreter,
+      captureStandardOut = captureStandardOut,
+      captureStandardErr = captureStandardErr
+    ),
+    name = name
+  )
 
   /**
    *

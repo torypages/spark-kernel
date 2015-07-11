@@ -19,6 +19,10 @@ pack <<= pack dependsOn (rebuildIvyXml dependsOn deliverLocal)
 
 packArchive <<= packArchive dependsOn (rebuildIvyXml dependsOn deliverLocal)
 
+libraryDependencies ++= Seq(
+  "org.jruby" % "jruby-complete" % "1.7.21"
+)
+
 //
 // TEST DEPENDENCIES
 //

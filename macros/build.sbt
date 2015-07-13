@@ -13,10 +13,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-// Do not export a jar for this or publish anything (should serve just as a pre-processor)
-libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
+resolvers += Resolver.sonatypeRepo("releases")
+
+libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _)
 
 libraryDependencies ++= (
-  if (scalaVersion.value.startsWith("2.10")) List("org.scalamacros" %% "quasiquotes" % "2.0.1")
+  if (scalaVersion.value.startsWith("2.10")) Seq(
+    "org.scalamacros" %% "quasiquotes" % "2.1.0-M5"
+  )
   else Nil
 )

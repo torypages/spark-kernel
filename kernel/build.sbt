@@ -25,6 +25,8 @@ packArchive <<= packArchive dependsOn (rebuildIvyXml dependsOn deliverLocal)
 libraryDependencies +=
   "org.spark-project.akka" %% "akka-testkit" % "2.3.4-spark" % "test" // MIT
 
+libraryDependencies += "org.apache.bcel" % "bcel" % "5.2" // Apache v2
+
 //
 // CUSTOM TASKS
 //

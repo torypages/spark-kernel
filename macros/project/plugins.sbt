@@ -13,6 +13,3 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-resolvers += Resolver.sonatypeRepo("releases")
-
-addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full)

@@ -60,6 +60,9 @@ object Common {
     scalaVersion := buildScalaVersion,
     sbtVersion := buildSbtVersion,
     libraryDependencies ++= buildLibraryDependencies,
+    addCompilerPlugin(
+      "org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full
+    ),
     isSnapshot := snapshot,
     sparkVersion := {
       val sparkEnvironmentVariable = "APACHE_SPARK_VERSION"

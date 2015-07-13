@@ -23,6 +23,30 @@ import com.ibm.spark.kernel.BuildInfo
 object SparkKernel extends App {
   private val options = new CommandLineOptions(args)
 
+  // ===========================================================================
+  // = TEST CODE
+  // ===========================================================================
+
+  // This trait was generated in the kernel-api module, which is provided to
+  // the kernel module via dependsOn
+  import com.ibm.spark.magic.dependencies.TestTrait
+
+  class A extends TestTrait
+  val a = new A
+
+  // You can actually see the methods available through reflection
+  println("TestTrait")
+  classOf[TestTrait].getDeclaredMethods.foreach(println)
+
+  // You can also see them available via reflection on the class using the trait
+  println("A")
+  classOf[A].getDeclaredMethods.foreach(println)
+
+  // This line fails (regardless of where the class/trait were generated)
+  //a.someFakeField = 3
+  System.exit(0)
+  // ===========================================================================
+
   if (options.help) {
     options.printHelpOn(System.out)
   } else if (options.version) {

@@ -22,7 +22,7 @@ import java.io.{InputStream, OutputStream, PrintStream}
  * Represents the global state for input and output streams used to communicate
  * standard input and output.
  */
-object StreamState {
+trait StreamState {
   private val _baseInputStream = System.in
   private val _baseOutputStream = System.out
   private val _baseErrorStream = System.err
@@ -84,3 +84,6 @@ object StreamState {
     returnValue
   }
 }
+
+/** Represents the global instance of the stream state. */
+object StreamState extends StreamState

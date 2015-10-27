@@ -17,7 +17,9 @@
 import org.apache.commons.io.FileUtils
 import sbt._
 import Keys._
-
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import sbtbuildinfo.Plugin._
 import scala.util.Properties
 
 object Common {
@@ -53,6 +55,27 @@ object Common {
 
   // The prefix used for our custom artifact names
   private val artifactPrefix = "ibm-spark"
+
+  /**
+   * Required by the sbt-buildinfo plugin. Defines the following:
+   * buildDate: Current date of build
+   * version: Current kernel version (see buildVersion in Common.scala)
+   * scalaVersion: Current Scala version (see buildScalaVersion in Common.scala)
+   * sparkVersion: Current Spark version
+   */
+  val generatedBuildSettings = Seq(
+    sourceGenerators in Compile <+= buildInfo,
+    buildInfoKeys ++= Seq[BuildInfoKey](
+      version, scalaVersion,
+      "sparkVersion" -> Common.sparkVersion.value,
+      "buildDate" -> {
+        val simpleDateFormat = new SimpleDateFormat("yyyyMMdd-HHmmss")
+        val now = Calendar.getInstance.getTime
+        simpleDateFormat.format(now)
+      }
+    ),
+    buildInfoPackage := "com.ibm.spark.kernel"
+  )
 
   val settings: Seq[Def.Setting[_]] = Seq(
     organization := buildOrganization,

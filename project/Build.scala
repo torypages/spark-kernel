@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-import java.text.SimpleDateFormat
-import java.util.Calendar
-
 import com.typesafe.sbt.SbtGhPages.ghpages
 import com.typesafe.sbt.SbtSite.site
 import sbt.Keys._
@@ -55,7 +52,7 @@ object Build extends Build with Settings with SubProjects with TestTasks {
   ).aggregate(
     client, kernel, kernel_api, communication, protocol, macros,
     pyspark_interpreter, scala_interpreter, sparkr_interpreter,
-    sql_interpreter
+    sql_interpreter, module_manager
   ).dependsOn(
     client % "test->test",
     kernel % "test->test"
@@ -160,35 +157,26 @@ trait SubProjects extends Settings with TestTasks {
   )
 
   /**
-   * Project representing the kernel-api code used by the Spark Kernel. Others can
-   * import this to implement their own magics and plugins.
+   * Project representing the kernel-api code used by the Spark Kernel. Others
+   * can import this to implement their own magics and plugins.
    */
   lazy val kernel_api = addTestTasksToProject(Project(
     id = "kernel-api",
     base = file("kernel-api"),
     settings = fullSettings ++ packSettings
-  )) dependsOn(macros % "test->test;compile->compile")
+  )) dependsOn(
+    module_manager % "test->test;compile->compile",
+    macros % "test->test;compile->compile"
+  )
 
   /**
-   * Required by the sbt-buildinfo plugin. Defines the following:
-   * buildDate: Current date of build
-   * version: Current kernel version (see buildVersion in Common.scala)
-   * scalaVersion: Current Scala version (see buildScalaVersion in Common.scala)
-   * sparkVersion: Current Spark version
+   * Project representing the module manager code used by the Spark Kernel.
    */
-  lazy val buildSettings = Seq(
-    sourceGenerators in Compile <+= buildInfo,
-    buildInfoKeys ++= Seq[BuildInfoKey](
-      version, scalaVersion,
-      "sparkVersion" -> Common.sparkVersion.value,
-      "buildDate" -> {
-        val simpleDateFormat = new SimpleDateFormat("yyyyMMdd-HHmmss")
-        val now = Calendar.getInstance.getTime
-        simpleDateFormat.format(now)
-      }
-    ),
-    buildInfoPackage := "com.ibm.spark.kernel"
-  )
+  lazy val module_manager = addTestTasksToProject(Project(
+    id = "module-manager",
+    base = file("module-manager"),
+    settings = fullSettings
+  )) dependsOn(macros % "test->test;compile->compile")
 
   /**
    * Project representing forms of communication used as input/output for the
@@ -210,7 +198,10 @@ trait SubProjects extends Settings with TestTasks {
   lazy val protocol = addTestTasksToProject(Project(
     id = "protocol",
     base = file("protocol"),
-    settings = fullSettings ++ buildInfoSettings ++ buildSettings ++ packSettings
+    settings = fullSettings ++
+      buildInfoSettings ++
+      Common.generatedBuildSettings ++
+      packSettings
   )) dependsOn(macros % "test->test;compile->compile")
 
   /**

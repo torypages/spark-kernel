@@ -19,9 +19,38 @@ package com.ibm.spark
 import com.ibm.spark.boot.layer._
 import com.ibm.spark.boot.{CommandLineOptions, KernelBootstrap}
 import com.ibm.spark.kernel.BuildInfo
+import com.ibm.spark.kernel.module.ModuleManager
+import org.clapper.classutil.ClassFinder
 
 object SparkKernel extends App {
   private val options = new CommandLineOptions(args)
+
+  val filteredClassPath = ClassFinder.classpath
+    .map(_.getPath).filter(_.contains("spark-kernel"))
+  //println("Classpath: " + ClassFinder.classpath.mkString("\n"))
+  //println("-----------------")
+  //println("Checking: " + filteredClassPath.mkString("\n"))
+
+  val beforeTime = System.currentTimeMillis()
+  val moduleManager = new ModuleManager[com.ibm.spark.interpreter.Interpreter](
+    searchMainClassPath = false,
+    extraClassPaths = filteredClassPath
+  )
+  val afterTime = System.currentTimeMillis()
+  //println("Time taken: " + ((afterTime - beforeTime) / 1000.0) + "s")
+
+  //modules.foreach(println)
+  val modules = moduleManager.loadAllModules()
+  modules.foreach { module =>
+    println("Module Name: " + module.getName)
+    module.getDeclaredConstructors.foreach { constructor =>
+      println("Module constructor: " + constructor.getParameterTypes.mkString(","))
+    }
+  }
+
+  //moduleManager.printModules()
+  Thread.sleep(1000)
+  System.exit(0)
 
   if (options.help) {
     options.printHelpOn(System.out)

@@ -335,6 +335,23 @@ class CommandLineOptionsSpec extends FunSpec with Matchers {
           be (Seq(url1, url2))
       }
     }
+
+
+    describe("when received --interpreter-scala-imports=<value>") {
+      describe("#toConfig") {
+        it("should set create a list of valus for an interpreter") {
+          val expected = "my.test.package.MyClass"
+          val expected2 = "my.test.package.MyClass2"
+          val options = new CommandLineOptions(
+            s"--interpreter-scala-import=${expected}" ::
+            s"--interpreter-scala-import=${expected2}" :: Nil)
+          val config: Config = options.toConfig
+
+          config.getStringList("interpreter.scala.import") should 
+            contain only(expected, expected2)
+        }
+      }
+    }
   }
 
 }

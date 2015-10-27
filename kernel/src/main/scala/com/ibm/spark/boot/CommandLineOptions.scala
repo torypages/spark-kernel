@@ -89,6 +89,16 @@ class CommandLineOptions(args: Seq[String]) {
     "directory where user added jars are stored (MUST EXIST)"
   ).withRequiredArg().ofType(classOf[String])
 
+  private val interpreters = Seq("scala", "pyspark", "sparkr", "sql")
+  
+  private val interpreterImports = interpreters.map( name => {
+    val option = parser.accepts(
+      s"interpreter-${name}-import",
+      s"an import for use within the ${name} interpreter"
+    ).withRequiredArg().ofType(classOf[String])
+    (name, option)
+  })
+
   private val _default_interpreter =
     parser.accepts("default-interpreter", "default interpreter for the kernel")
       .withRequiredArg().ofType(classOf[String])
@@ -129,9 +139,14 @@ class CommandLineOptions(args: Seq[String]) {
         ConfigFactory.parseFile(x)
       case None =>
         ConfigFactory.empty()
-    }
+    } 
+    
+    val interpreterImportsMap = interpreterImports.map( nameArgTuple => {
+      s"interpreter.${nameArgTuple._1}.import" -> getAll(nameArgTuple._2).map(_.asJava)
+        .flatMap(list => if (list.isEmpty) None else Some(list))
+    }).toMap
 
-    val commandLineConfig: Config = ConfigFactory.parseMap(Map(
+    val commandLineArgsMap = Map(
       "spark.master" -> get(_master),
       "stdin_port" -> get(_stdin_port),
       "shell_port" -> get(_shell_port),
@@ -148,7 +163,13 @@ class CommandLineOptions(args: Seq[String]) {
       "max_interpreter_threads" -> get(_max_interpreter_threads),
       "jar_dir" -> get(_jar_dir),
       "default_interpreter" -> get(_default_interpreter)
-    ).flatMap(removeEmptyOptions).asInstanceOf[Map[String, AnyRef]].asJava)
+    )
+    
+    
+    val commandLineConfig: Config = ConfigFactory.parseMap(
+      (commandLineArgsMap ++ interpreterImportsMap)
+        .flatMap(removeEmptyOptions).asInstanceOf[Map[String, AnyRef]].asJava
+    )
 
     commandLineConfig.withFallback(profileConfig).withFallback(ConfigFactory.load)
   }

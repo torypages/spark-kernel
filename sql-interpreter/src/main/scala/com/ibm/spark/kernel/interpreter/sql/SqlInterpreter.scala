@@ -19,6 +19,7 @@ import java.net.URL
 
 import com.ibm.spark.interpreter.{ExecuteFailure, ExecuteOutput, Interpreter}
 import com.ibm.spark.interpreter.Results.Result
+import com.ibm.spark.utils.LogLike
 import org.apache.spark.sql.SQLContext
 
 import scala.concurrent.duration._
@@ -28,7 +29,8 @@ import scala.tools.nsc.interpreter.{OutputStream, InputStream}
 /**
  * Represents an interpreter interface to Spark SQL.
  */
-class SqlInterpreter(private val sqlContext: SQLContext) extends Interpreter {
+class SqlInterpreter(private val sqlContext: SQLContext) extends Interpreter 
+  with LogLike {
   private lazy val sqlService = new SqlService(sqlContext)
   private lazy val sqlTransformer = new SqlTransformer
 
@@ -105,4 +107,13 @@ class SqlInterpreter(private val sqlContext: SQLContext) extends Interpreter {
 
   // Unsupported
   override def doQuietly[T](body: => T): T = ???
+
+  override def addImports(values: String*): Unit = {
+    logger.warn(
+      s"""Imports are not yet supported by the SQL interpreter.
+         |Skipping imports for:
+         |${values.reduce(_+"\n"+_)}|
+       """.stripMargin
+    )
+  }
 }

@@ -20,8 +20,8 @@ import java.net.URL
 import com.ibm.spark.interpreter.Results.Result
 import com.ibm.spark.interpreter._
 import com.ibm.spark.kernel.api.KernelLike
+import com.ibm.spark.utils.LogLike
 import org.apache.spark.SparkContext
-import org.slf4j.LoggerFactory
 import py4j.GatewayServer
 
 import scala.concurrent.Await
@@ -39,8 +39,7 @@ import scala.tools.nsc.interpreter.{InputStream, OutputStream}
 class PySparkInterpreter(
   private val _kernel: KernelLike,
   private val _sparkContext: SparkContext
-) extends Interpreter {
-  private val logger = LoggerFactory.getLogger(this.getClass)
+) extends Interpreter with LogLike {
 
   // TODO: Replace hard-coded maximum queue count
   /** Represents the state used by this interpreter's Python instance. */
@@ -144,4 +143,13 @@ class PySparkInterpreter(
 
   // Unsupported
   override def doQuietly[T](body: => T): T = ???
+
+  override def addImports(values: String*): Unit = {
+    logger.warn(
+      s"""Imports are not yet supported by the PySpark interpreter.
+         |Skipping imports for:
+         |${values.reduce(_+"\n"+_)}|
+       """.stripMargin
+    )
+  }
 }

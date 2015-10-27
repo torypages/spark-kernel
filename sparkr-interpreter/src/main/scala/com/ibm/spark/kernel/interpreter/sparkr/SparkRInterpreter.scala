@@ -143,4 +143,12 @@ class SparkRInterpreter(
 
   // Unsupported
   override def doQuietly[T](body: => T): T = ???
+  override def addImports(values: String*): Unit = {
+    logger.warn(
+      s"""Imports are not yet supported by the SparkR interpreter.
+         |Skipping imports for:
+         |${values.reduce(_+"\n"+_)}|
+       """.stripMargin
+    )
+  }
 }

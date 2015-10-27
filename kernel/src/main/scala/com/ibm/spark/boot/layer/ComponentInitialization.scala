@@ -174,7 +174,9 @@ trait StandardComponentInitialization extends ComponentInitialization {
 
     logger.debug("Starting interpreter")
     interpreter.start()
-
+    
+    ImportLoader.loadImports(config, "scala", interpreter)
+    
     interpreter
   }
 

@@ -115,4 +115,19 @@ trait Interpreter {
    * @return The runtime class loader used by this interpreter
    */
   def classLoader: ClassLoader
+
+  /**
+   * An interface for adding imports to the interpreter. The values parameter
+   * will be the raw values to import. For example a scala interpreter
+   * could receive a sequence of values like:
+   *  [
+   *    com.typesafe._,
+   *    org.apache.spark.SparkConf
+   *  ]    
+   *  
+   *  It would be then up to the interpreter to appropriately import those
+   *  values into the interpreter.
+   * @param values String values of the items to import
+   */
+  def addImports(values: String*): Unit
 }

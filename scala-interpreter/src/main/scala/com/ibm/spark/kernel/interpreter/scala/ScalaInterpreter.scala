@@ -498,5 +498,9 @@ class ScalaInterpreter(
   }
 
   override def classLoader: ClassLoader = _runtimeClassloader
+
+  override def addImports(values: String*): Unit = {
+    sparkIMain.addImports(values:_*)
+  }
 }
 

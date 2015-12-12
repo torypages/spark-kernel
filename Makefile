@@ -28,7 +28,7 @@ RUN=$(RUN_PREFIX)$(1)$(RUN_SUFFIX)
 
 ENV_OPTS=APACHE_SPARK_VERSION=$(APACHE_SPARK_VERSION) VERSION=$(VERSION) IS_SNAPSHOT=$(IS_SNAPSHOT)
 
-FULL_VERSION=$(shell echo $(VERSION)`[ "$(IS_SNAPSHOT)" == "true" ] && (echo '-SNAPSHOT')` )
+FULL_VERSION=$(shell echo $(VERSION)`[ "$(IS_SNAPSHOT)" = "true" ] && (echo '-SNAPSHOT')` )
 ASSEMBLY_JAR=$(shell echo kernel-assembly-$(FULL_VERSION).jar )
 
 help:
